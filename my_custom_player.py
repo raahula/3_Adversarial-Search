@@ -180,6 +180,28 @@ class monteCarloNode():
         if self.parent:
             self.parent.backpropogate(result)
 
-class monteCarloTreeSearch(state):
+class monteCarloTreeSearch(object):
+
+	def __init__(self, node):
+		self.root = node
+
+	def best_action(self, simulation_number):
+		for _in range(simulation_number):
+			v = self._tree_policy()
+			reward = v.rollout()
+			v.backpropogate(reward)
+		return self.root.best_child(c_parameter = 0)
+
+	def _tree_policy(self):
+		current_node = self.root
+		while not current_node.is_terminal_node():
+			return current_node.expand()
+		else:
+			current_node = current_node.best_child()
+		return current_node
+
+
+
+
     
 
