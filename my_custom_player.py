@@ -128,10 +128,12 @@ class monteCarloNode():
         self._visits = 0
         self._result = defaultdict(int)
         self._untried_action = None
-        #self.children = []
+        self.children = []
+        self.state = state
+        self.parent = parent
 
     def fully_expanded(self):
-        return len(self._untried_action) == 0
+        return len(self.untried_action) == 0
 
     def best_child(self, c_parameter):
         weight = [(c.q/c.n)+c_parameter*np.sqrt((2*np.log(self.n)/c.n)) for c in self.children]
@@ -146,8 +148,8 @@ class monteCarloNode():
         return self._untried_action
 
     def q(self):
-        wins = self.result[1-self.parent.state.player()]
-        losses = self.result[self.parent.state.player()]
+        wins = self._result[1-self.parent.state.player()]
+        losses = self._result[self.parent.state.player()]
         return wins - losses
 
     def n(self):
@@ -156,14 +158,16 @@ class monteCarloNode():
     def expand(self):
         action = self.untried_action.pop()
         next_state = self.state.result(action)
-        monteCarloNode(next_state).../////????
+        child_node = monteCarloNode(next_state, parent = self)
+        self.children.append(child_node)
+        return child_node
 
     def is_terminal_node(self):
         return self.state.terminal_test()
 
     def rollout(self):
         current_rollout_state = self.state
-        while not current_rollout_state.terminal_test()::
+        while not current_rollout_state.terminal_test():
             possible_moves = current_rollout_state.actions()
             action = self.rollout_policy(possible_moves)
             current_rollout_state = current_rollout_state.result(action)
@@ -186,7 +190,7 @@ class monteCarloTreeSearch(object):
 		self.root = node
 
 	def best_action(self, simulation_number):
-		for _in range(simulation_number):
+		for _ in range(simulation_number):
 			v = self._tree_policy()
 			reward = v.rollout()
 			v.backpropogate(reward)
