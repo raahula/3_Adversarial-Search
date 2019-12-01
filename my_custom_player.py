@@ -173,8 +173,8 @@ class CustomPlayer_mcts(DataPlayer):
         if state.ply_count<2:
             self.queue.put(random.choice(state.actions()))
         else:
-            #for d in range (1, 100):
-            self.queue.put(self.best_action(state, simulation_number=3))
+            for d in range (1, 100):
+            	self.queue.put(self.best_action(state, d))
 
     def best_action(self, state, simulation_number):
         self.root = monteCarloNode(state, parent=None)
@@ -187,7 +187,9 @@ class CustomPlayer_mcts(DataPlayer):
     def _tree_policy(self):
         current_node = self.root
         while not current_node.is_terminal_node():
-            return current_node.expand()
+            while not current_node.fully_expanded():
+                #print("tree_policy current node "+str(current_node))
+                return current_node.expand()
         else:
             current_node = current_node.best_child()
         return current_node
@@ -211,10 +213,10 @@ class monteCarloNode():
         self.parent = parent
 
     def fully_expanded(self):
-        return len(self.untried_action) == 0
+        return len(self.untried_action()) == 0
 
     def best_child(self, c_parameter=1.4):
-        weight = [(c.q()/ (c.n()))+c_parameter*np.sqrt((2*np.log(self.n())/c.n())) for c in self.children]
+        weight = [(c.q()/ c.n())+c_parameter*np.sqrt((2*np.log(self.n())/c.n())) for c in self.children]
         return self.children[np.argmax(weight)]
 
     def rollout_policy(self, possible_moves):
@@ -238,7 +240,9 @@ class monteCarloNode():
         #print(self.state.actions)
         #p = random.choice(self._untried_action)
         #self._untried_action.remove(p)
-        action = self.untried_action().pop()
+        #action=None
+        if self.untried_action()!=[]:
+            action = self.untried_action().pop()
         #action = p
         next_state = self.state.result(action)
         child_node = monteCarloNode(next_state, parent = self)
