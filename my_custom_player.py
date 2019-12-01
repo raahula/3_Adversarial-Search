@@ -1,8 +1,12 @@
 
 from sample_players import DataPlayer
+import random
+import numpy as np
+from collections import defaultdict
+from abc import ABC, abstractmethod
 
 
-class CustomPlayer(DataPlayer):
+class CustomPlayer_alpha_beta(DataPlayer):
     """ Implement your own agent to play knight's Isolation
 
     The get_action() method is the only required method for this project.
@@ -122,9 +126,83 @@ class CustomPlayer(DataPlayer):
         return len(own_liberties) - len(opp_liberties)
 
 
+
+
+class CustomPlayer_mcts(DataPlayer):
+    """ Implement your own agent to play knight's Isolation
+
+    The get_action() method is the only required method for this project.
+    You can modify the interface for get_action by adding named parameters
+    with default values, but the function MUST remain compatible with the
+    default interface.
+
+    **********************************************************************
+    NOTES:
+    - The test cases will NOT be run on a machine with GPU access, nor be
+      suitable for using any other machine learning techniques.
+
+    - You can pass state forward to your agent on the next turn by assigning
+      any pickleable object to the self.context attribute.
+    **********************************************************************
+    """
+       
+    def get_action(self, state):
+        """ Employ an adversarial search technique to choose an action
+        available in the current state calls self.queue.put(ACTION) at least
+
+        This method must call self.queue.put(ACTION) at least once, and may
+        call it as many times as you want; the caller will be responsible
+        for cutting off the function after the search time limit has expired.
+
+        See RandomPlayer and GreedyPlayer in sample_players for more examples.
+
+        **********************************************************************
+        NOTE: 
+        - The caller is responsible for cutting off search, so calling
+          get_action() from your own code will create an infinite loop!
+          Refer to (and use!) the Isolation.play() function to run games.
+        **********************************************************************
+        """
+        # TODO: Replace the example implementation below with your own search
+        #       method by combining techniques from lecture
+        #
+        # EXAMPLE: choose a random move without any search--this function MUST
+        #          call self.queue.put(ACTION) at least once before time expires
+        #          (the timer is automatically managed for you)
+        
+        if state.ply_count<2:
+            self.queue.put(random.choice(state.actions()))
+        else:
+            #for d in range (1, 100):
+            self.queue.put(self.best_action(state, simulation_number=3))
+
+    def best_action(self, state, simulation_number):
+        self.root = monteCarloNode(state, parent=None)
+        for _ in range(simulation_number):
+            v = self._tree_policy()
+            reward = v.rollout()
+            v.backpropogate(reward)
+        return self.root.best_child(c_parameter = 0)
+
+    def _tree_policy(self):
+        current_node = self.root
+        while not current_node.is_terminal_node():
+            return current_node.expand()
+        else:
+            current_node = current_node.best_child()
+        return current_node
+
+    def score(self, state):
+        own_loc = state.locs[self.player_id]
+        opp_loc = state.locs[1 - self.player_id]
+        own_liberties = state.liberties(own_loc)
+        opp_liberties = state.liberties(opp_loc)
+        return len(own_liberties) - len(opp_liberties)
+
+
 class monteCarloNode():
     def __init__(self, state, parent = None):
-        super().__init__(state, parent)
+        #super().__init__(state, parent)
         self._visits = 0
         self._result = defaultdict(int)
         self._untried_action = None
@@ -135,18 +213,19 @@ class monteCarloNode():
     def fully_expanded(self):
         return len(self.untried_action) == 0
 
-    def best_child(self, c_parameter):
-        weight = [(c.q/c.n)+c_parameter*np.sqrt((2*np.log(self.n)/c.n)) for c in self.children]
+    def best_child(self, c_parameter=1.4):
+        weight = [(c.q()/ (c.n()))+c_parameter*np.sqrt((2*np.log(self.n())/c.n())) for c in self.children]
         return self.children[np.argmax(weight)]
 
     def rollout_policy(self, possible_moves):
         return random.choice(possible_moves)
-
+    
     def untried_action(self):
+        #print(self.state.actions)
         if self._untried_action == None:
-            self._untried_action = self.state.actions #available legal actions
+            self._untried_action = self.state.actions() #available legal actions
         return self._untried_action
-
+    	
     def q(self):
         wins = self._result[1-self.parent.state.player()]
         losses = self._result[self.parent.state.player()]
@@ -156,7 +235,11 @@ class monteCarloNode():
         return self._visits
 
     def expand(self):
-        action = self.untried_action.pop()
+        #print(self.state.actions)
+        #p = random.choice(self._untried_action)
+        #self._untried_action.remove(p)
+        action = self.untried_action().pop()
+        #action = p
         next_state = self.state.result(action)
         child_node = monteCarloNode(next_state, parent = self)
         self.children.append(child_node)
@@ -172,9 +255,9 @@ class monteCarloNode():
             action = self.rollout_policy(possible_moves)
             current_rollout_state = current_rollout_state.result(action)
             if current_rollout_state.utility(0) == float("inf"):
-                return 0
-            if current_rollout_state.utility(0) == float("-inf"):
                 return 1
+            if current_rollout_state.utility(0) == float("-inf"):
+                return -1
             else:
                 return None
 
@@ -184,6 +267,9 @@ class monteCarloNode():
         if self.parent:
             self.parent.backpropogate(result)
 
+CustomPlayer = CustomPlayer_mcts
+
+'''
 class monteCarloTreeSearch(object):
 
 	def __init__(self, node):
@@ -203,9 +289,4 @@ class monteCarloTreeSearch(object):
 		else:
 			current_node = current_node.best_child()
 		return current_node
-
-
-
-
-    
-
+'''
