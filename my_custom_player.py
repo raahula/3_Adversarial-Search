@@ -1,6 +1,7 @@
 
 from sample_players import DataPlayer
-import random
+import random, math
+import time
 import numpy as np
 from collections import defaultdict
 from abc import ABC, abstractmethod
@@ -173,12 +174,15 @@ class CustomPlayer_mcts(DataPlayer):
         if state.ply_count<2:
             self.queue.put(random.choice(state.actions()))
         else:
-            for d in range (1, 100):
-            	self.queue.put(self.best_action(state, d))
+            #for d in range (1, 100):
+            self.queue.put(self.best_action(state, 450))
 
-    def best_action(self, state, simulation_number):
+    def best_action(self, state, simulation_time):
         self.root = monteCarloNode(state, parent=None)
-        for _ in range(simulation_number):
+        start = time.time()
+        max_time = (math.ceil(simulation_time*0.75))
+        time_spent = (time.time()-start) * 1000
+        while time_spent<= max_time:
             v = self._tree_policy()
             reward = v.rollout()
             v.backpropogate(reward)
@@ -241,8 +245,8 @@ class monteCarloNode():
         #p = random.choice(self._untried_action)
         #self._untried_action.remove(p)
         #action=None
-        if self.untried_action()!=[]:
-            action = self.untried_action().pop()
+        #if self.untried_action()!=[]:
+        action = self.untried_action().pop()
         #action = p
         next_state = self.state.result(action)
         child_node = monteCarloNode(next_state, parent = self)
@@ -258,12 +262,12 @@ class monteCarloNode():
             possible_moves = current_rollout_state.actions()
             action = self.rollout_policy(possible_moves)
             current_rollout_state = current_rollout_state.result(action)
-            if current_rollout_state.utility(0) == float("inf"):
+            if current_rollout_state.utility(1-current_rollout_state.player()) == float("inf"):
                 return 1
-            if current_rollout_state.utility(0) == float("-inf"):
+            if current_rollout_state.utility(1-current_rollout_state.player()) == float("-inf"):
                 return -1
             else:
-                return None
+                return 0
 
     def backpropogate(self, result):
         self._visits+=1
