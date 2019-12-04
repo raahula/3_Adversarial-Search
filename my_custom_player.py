@@ -206,7 +206,7 @@ class CustomPlayer_mcts(DataPlayer):
 
     #def best_action(self, state, simulation_time):
     def best_action(self, state):
-        self.root = monteCarloNode(state, parent=None)
+        self.root = monteCarloNode(state, whatactionwasperformedfcs= None, parent=None)
 
         '''
         max_time = (math.ceil(simulation_time*0.75))
@@ -226,27 +226,32 @@ class CustomPlayer_mcts(DataPlayer):
 
         #use this for simulation count 
 
-        for _ in range(0, 40):           
+        for i in range(0, 10):           
             v = self._tree_policy()
             reward = v.rollout()
+            #print ("winner is player {} for iteration {}".format(reward, i))
             v.backpropagate(reward)
-        return self.root.best_child(c_parameter = 0.5)
+            #print(i)
+            #print (v.backpropagate(reward))
+            #print(self.root.best_child(c_parameter = 0.5))
+        return self.root.best_child(c_parameter = 0.5).whatactionwasperformedfcs
+        
 
         
 
 
-        '''
+        
 
-        #use this for time 
+        '''#use this for time 
         start_time = time.time()
 
         while time.time() - start_time < time_limit:           
             v = self._tree_policy()
             reward = v.rollout()
             v.backpropagate(reward)
-        return self.root.best_child(c_parameter = 0.5)
-
+        return self.root.best_child(c_parameter = 0.5).whatactionwasperformedfcs
         '''
+        
 
     def _tree_policy(self):
         current_node = self.root
@@ -259,7 +264,7 @@ class CustomPlayer_mcts(DataPlayer):
         return current_node
 
 class monteCarloNode():
-    def __init__(self, state, parent = None):
+    def __init__(self, state, whatactionwasperformedfcs, parent = None):
         #super().__init__(state, parent)
         self._visits = 0
         self._result = defaultdict(int)
@@ -267,6 +272,7 @@ class monteCarloNode():
         self.children = []
         self.state = state
         self.parent = parent
+        self.whatactionwasperformedfcs = whatactionwasperformedfcs
 
     def fully_expanded(self):
         return len(self.untried_action) == 0
@@ -289,6 +295,7 @@ class monteCarloNode():
     def q(self):
         wins = self._result[self.parent.state.player()]
         losses = self._result[1-self.parent.state.player()]
+        #print(wins - losses)
         return wins - losses
     @property
     def n(self):
@@ -303,7 +310,7 @@ class monteCarloNode():
         action = self.untried_action.pop()
         #action = p
         next_state = self.state.result(action)
-        child_node = monteCarloNode(next_state, parent = self)
+        child_node = monteCarloNode(next_state, whatactionwasperformedfcs= action, parent = self)
         self.children.append(child_node)
         return child_node
 
