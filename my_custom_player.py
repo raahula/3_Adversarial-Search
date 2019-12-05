@@ -182,11 +182,11 @@ class CustomPlayer_mcts(DataPlayer):
         '''
         for i in range(0, 10):           
             v = self._tree_policy()
-            reward = v.rollout()
-            #print ("winner is player {} for iteration {}".format(reward, i))
-            v.backpropagate(reward)
+            player_won = v.rollout()
+            #print ("winner is player {} for iteration {}".format(player_won, i))
+            v.backpropagate(player_won)
             #print(i)
-            #print (v.backpropagate(reward))
+            #print (v.backpropagate(player_won))
             #print(self.root.best_child(c_parameter = 0.5))
         return self.root.best_child(c_parameter = 0.5).whatactionwasperformedfcs
         '''   
@@ -196,12 +196,11 @@ class CustomPlayer_mcts(DataPlayer):
 
         while time.time() - start_time < time_limit:           
             v = self._tree_policy()
-            reward = v.rollout()
-            v.backpropagate(reward)
+            player_won = v.rollout()
+            v.backpropagate(player_won)
         return self.root.best_child(c_parameter = 0.5).whatactionwasperformedfcs
         
         
-
     def _tree_policy(self):
         current_node = self.root
         while not current_node.is_terminal_node():
@@ -224,19 +223,23 @@ class monteCarloNode():
     def fully_expanded(self):
         return len(self.untried_action) == 0
 
-    def best_child(self, c_parameter=1.4):
-        weight = [(c.q/ c.n) + c_parameter*np.sqrt((2*np.log(self.n)/c.n)) for c in self.children]
-        return self.children[np.argmax(weight)]
-
-    def rollout_policy(self, possible_moves):
-        return random.choice(possible_moves)
-    
+    def expand(self):
+        action = self.untried_action.pop()
+        next_state = self.state.result(action)
+        child_node = monteCarloNode(next_state, whatactionwasperformedfcs= action, parent = self)
+        self.children.append(child_node)
+        return child_node
+        
     @property
     def untried_action(self):
         if self._untried_action is None:
             self._untried_action = self.state.actions() #available legal actions
         return self._untried_action
-    
+
+    def best_child(self, c_parameter=1.4):
+        weight = [(c.q/ c.n) + c_parameter*np.sqrt((2*np.log(self.n)/c.n)) for c in self.children]
+        return self.children[np.argmax(weight)]
+  
     @property
     def q(self):
         wins = self._result[self.parent.state.player()]
@@ -247,17 +250,13 @@ class monteCarloNode():
     def n(self):
         return self._visits
 
-    def expand(self):
-        action = self.untried_action.pop()
-        next_state = self.state.result(action)
-        child_node = monteCarloNode(next_state, whatactionwasperformedfcs= action, parent = self)
-        self.children.append(child_node)
-        return child_node
-
     def is_terminal_node(self):
         return self.state.terminal_test()
 
-    def rollout(self):   #updated
+    def rollout_policy(self, possible_moves):
+        return random.choice(possible_moves)
+
+    def rollout(self):
         current_rollout_state = self.state
         player = self.state.player()
         while not current_rollout_state.terminal_test():
@@ -268,8 +267,6 @@ class monteCarloNode():
                 return player
             if current_rollout_state.utility(player) == float("-inf"):
                 return (1-player)
-            #else:
-                #return 0
 
     def backpropagate(self, result):
         self._visits+=1
