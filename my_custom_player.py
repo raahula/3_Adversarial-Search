@@ -225,7 +225,7 @@ class CustomPlayer_mcts(DataPlayer):
         
 
         #use this for simulation count 
-
+        '''
         for i in range(0, 10):           
             v = self._tree_policy()
             reward = v.rollout()
@@ -235,14 +235,14 @@ class CustomPlayer_mcts(DataPlayer):
             #print (v.backpropagate(reward))
             #print(self.root.best_child(c_parameter = 0.5))
         return self.root.best_child(c_parameter = 0.5).whatactionwasperformedfcs
-        
+        '''
 
         
 
 
         
 
-        '''#use this for time 
+        #use this for time 
         start_time = time.time()
 
         while time.time() - start_time < time_limit:           
@@ -250,7 +250,7 @@ class CustomPlayer_mcts(DataPlayer):
             reward = v.rollout()
             v.backpropagate(reward)
         return self.root.best_child(c_parameter = 0.5).whatactionwasperformedfcs
-        '''
+        
         
 
     def _tree_policy(self):
