@@ -172,57 +172,11 @@ class CustomPlayer_mcts(DataPlayer):
         # EXAMPLE: choose a random move without any search--this function MUST
         #          call self.queue.put(ACTION) at least once before time expires
         #          (the timer is automatically managed for you)
-        
-        '''
-        start_time = time.time()
-        if state.ply_count<2:
-            self.queue.put(random.choice(state.actions()))
-        else:        
-            while time.time() - start_time < time_limit:
-                self.queue.put(self.best_action(state))
-        '''
-        #start_time = time.time()
-        
-        #if state.ply_count<2:
-        #    self.queue.put(random.choice(state.actions()))
-        #else:        
+               
         self.queue.put(self.best_action(state))        
 
-        '''
-        if state.ply_count<2:
-            self.queue.put(random.choice(state.actions()))
-        else:
-            for d in range (49, 50):
-                self.queue.put(self.best_action(state))            
-
-            
-            if self.best_action(state, 50):
-                self.queue.put(self.best_action(state, 50))
-            elif state.actions():
-                self.queue.put(random.choice(state.actions()))
-            else:
-                self.queue.put(None)
-            '''
-
-    #def best_action(self, state, simulation_time):
     def best_action(self, state):
-        self.root = monteCarloNode(state, whatactionwasperformedfcs= None, parent=None)
-
-        '''
-        max_time = (math.ceil(simulation_time*0.75))
-        start = time.time()
-       
-        while ((time.time()-start) * 1000) <= max_time:
-            v = self._tree_policy()
-            reward = v.rollout()
-            v.backpropagate(reward)
-        return self.root.best_child(c_parameter = 0.5)
-        v = self._tree_policy()
-        reward = v.rollout()
-        v.backpropagate(reward)
-        '''
-
-        
+        self.root = monteCarloNode(state, whatactionwasperformedfcs= None, parent=None)       
 
         #use this for simulation count 
         '''
@@ -235,12 +189,7 @@ class CustomPlayer_mcts(DataPlayer):
             #print (v.backpropagate(reward))
             #print(self.root.best_child(c_parameter = 0.5))
         return self.root.best_child(c_parameter = 0.5).whatactionwasperformedfcs
-        '''
-
-        
-
-
-        
+        '''   
 
         #use this for time 
         start_time = time.time()
@@ -257,7 +206,6 @@ class CustomPlayer_mcts(DataPlayer):
         current_node = self.root
         while not current_node.is_terminal_node():
             if not current_node.fully_expanded():
-                #print("tree_policy current node "+str(current_node))
                 return current_node.expand()
             else:
                 current_node = current_node.best_child()
@@ -265,7 +213,6 @@ class CustomPlayer_mcts(DataPlayer):
 
 class monteCarloNode():
     def __init__(self, state, whatactionwasperformedfcs, parent = None):
-        #super().__init__(state, parent)
         self._visits = 0
         self._result = defaultdict(int)
         self._untried_action = None
@@ -286,7 +233,6 @@ class monteCarloNode():
     
     @property
     def untried_action(self):
-        #print(self.state.actions)
         if self._untried_action is None:
             self._untried_action = self.state.actions() #available legal actions
         return self._untried_action
@@ -302,13 +248,7 @@ class monteCarloNode():
         return self._visits
 
     def expand(self):
-        #print(self.state.actions)
-        #p = random.choice(self._untried_action)
-        #self._untried_action.remove(p)
-        #action=None
-        #if self.untried_action()!=[]:
         action = self.untried_action.pop()
-        #action = p
         next_state = self.state.result(action)
         child_node = monteCarloNode(next_state, whatactionwasperformedfcs= action, parent = self)
         self.children.append(child_node)
@@ -338,25 +278,3 @@ class monteCarloNode():
             self.parent.backpropagate(result)
 
 CustomPlayer = CustomPlayer_mcts
-
-'''
-class monteCarloTreeSearch(object):
-
-	def __init__(self, node):
-		self.root = node
-
-	def best_action(self, simulation_number):
-		for _ in range(simulation_number):
-			v = self._tree_policy()
-			reward = v.rollout()
-			v.backpropagate(reward)
-		return self.root.best_child(c_parameter = 0)
-
-	def _tree_policy(self):
-		current_node = self.root
-		while not current_node.is_terminal_node():
-			return current_node.expand()
-		else:
-			current_node = current_node.best_child()
-		return current_node
-'''
