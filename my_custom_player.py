@@ -2,7 +2,7 @@
 from sample_players import DataPlayer
 import random, math
 import time
-import numpy as np
+#import numpy as np
 from collections import defaultdict
 from abc import ABC, abstractmethod
 
@@ -120,14 +120,14 @@ class CustomPlayer_alpha_beta(DataPlayer):
             alpha = max(alpha, v)
         return v
 
-          
+'''          
     def score(self, state):
         own_loc = state.locs[self.player_id]
         opp_loc = state.locs[1 - self.player_id]
         own_liberties = state.liberties(own_loc)
         opp_liberties = state.liberties(opp_loc)
         return len(own_liberties) - len(opp_liberties)
-
+'''
 
 
 
@@ -173,16 +173,24 @@ class CustomPlayer_mcts(DataPlayer):
         #          call self.queue.put(ACTION) at least once before time expires
         #          (the timer is automatically managed for you)
                
-        self.queue.put(self.best_action(state))        
+        
+        '''
+        if state.ply_count < 2:
+            self.queue.put(random.choice(state.actions()))
+        else:
+            self.queue.put(self.best_action(state))
+        '''    
+        self.queue.put(self.best_action(state))
 
+        
     def best_action(self, state):
         self.root = monteCarloNode(state, whatactionwasperformedfcs= None, parent=None)       
 
         #use this for simulation count 
         '''
         for i in range(0, 10):           
-            v = self._tree_policy()
-            player_won = v.rollout()
+            v = self.node_selection()
+            player_won = v.simulation()
             #print ("winner is player {} for iteration {}".format(player_won, i))
             v.backpropagate(player_won)
             #print(i)
@@ -195,17 +203,22 @@ class CustomPlayer_mcts(DataPlayer):
         start_time = time.time()
 
         while time.time() - start_time < time_limit:           
-            v = self._tree_policy()
-            player_won = v.rollout()
+            v = self.node_selection()
+            player_won = v.simulation()
             v.backpropagate(player_won)
-        return self.root.best_child(c_parameter = 0.5).whatactionwasperformedfcs
+        if self.root.children:
+            return self.root.best_child(c_parameter = 0.5).whatactionwasperformedfcs
+        else:
+            return random.choice(self.root.state.actions)
         
         
-    def _tree_policy(self):
+    def node_selection(self):
         current_node = self.root
         while not current_node.is_terminal_node():
-            if not current_node.fully_expanded():
-                return current_node.expand()
+            if not current_node.all_actions_explored():
+                return current_node.try_unexplored_action()
+            #if current_node.visit_count<10:
+            #    return random.choice(current_node.children)
             else:
                 current_node = current_node.best_child()
         return current_node
@@ -220,34 +233,54 @@ class monteCarloNode():
         self.parent = parent
         self.whatactionwasperformedfcs = whatactionwasperformedfcs
 
-    def fully_expanded(self):
-        return len(self.untried_action) == 0
+    def all_actions_explored(self):
+        if not self.untried_action():
+            return True
 
-    def expand(self):
-        action = self.untried_action.pop()
+            '''
+        li = self.untried_action()
+        l = len(li)
+        return l == 0
+        '''
+
+    def try_unexplored_action(self):
+        action = self.untried_action().pop()
         next_state = self.state.result(action)
         child_node = monteCarloNode(next_state, whatactionwasperformedfcs= action, parent = self)
         self.children.append(child_node)
         return child_node
-        
-    @property
+    
+   
     def untried_action(self):
         if self._untried_action is None:
             self._untried_action = self.state.actions() #available legal actions
         return self._untried_action
 
     def best_child(self, c_parameter=1.4):
-        weight = [(c.q/ c.n) + c_parameter*np.sqrt((2*np.log(self.n)/c.n)) for c in self.children]
-        return self.children[np.argmax(weight)]
+        w = float("-inf")
+        ch = None
+        for c in self.children:
+            weight = (c.score_parent_perspective()/ c.visit_count()) + c_parameter*math.sqrt((2*math.log(self.visit_count())/c.visit_count()))
+            if weight > w:
+                w=weight
+                ch = c
+        #weight = [(c.score_parent_perspective/ c.visit_count) + c_parameter*math.sqrt((2*math.log(self.visit_count)/c.visit_count)) \
+        #for c in self.children]
+        #return self.children[np.argmax(weight)]
+        return ch
   
-    @property
-    def q(self):
+
+    def score_parent_perspective(self):
         wins = self._result[self.parent.state.player()]
         losses = self._result[1-self.parent.state.player()]
+
+        #wins = self._result[0]
+        #losses = self._result[1]
+
         #print(wins - losses)
-        return wins - losses
-    @property
-    def n(self):
+        return wins
+
+    def visit_count(self):
         return self._visits
 
     def is_terminal_node(self):
@@ -256,7 +289,7 @@ class monteCarloNode():
     def rollout_policy(self, possible_moves):
         return random.choice(possible_moves)
 
-    def rollout(self):
+    def simulation(self):
         current_rollout_state = self.state
         player = self.state.player()
         while not current_rollout_state.terminal_test():
@@ -267,11 +300,17 @@ class monteCarloNode():
                 return player
             if current_rollout_state.utility(player) == float("-inf"):
                 return (1-player)
+            if current_rollout_state.utility(player) == 0:
+                return ("draw")        
 
-    def backpropagate(self, result):
+    def backpropagate(self, player_won):
         self._visits+=1
-        self._result[result] += 1
+        if player_won!="draw":
+            self._result[player_won] += 2
+        else:
+            self._result[0] += 0.5
+            self._result[1] += 0.5
         if self.parent:
-            self.parent.backpropagate(result)
+            self.parent.backpropagate(player_won)
 
 CustomPlayer = CustomPlayer_mcts
