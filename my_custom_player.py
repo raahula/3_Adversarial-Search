@@ -10,7 +10,7 @@ BUFFER_TIME = .005
 time_limit = .150 - BUFFER_TIME
 
 
-class CustomPlayer_mcts(DataPlayer):
+class CustomPlayer(DataPlayer):
     """ Implement your own agent to play knight's Isolation
 
     The get_action() method is the only required method for this project.
@@ -162,5 +162,3 @@ class monteCarloNode():
             self._result[1] += 0.5
         if self.parent:
             self.parent.backpropagate(player_won)
-
-CustomPlayer = CustomPlayer_mcts
